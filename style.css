@@ -1,0 +1,25 @@
+html, body {
+  height: 100%;
+  width: 100%;
+}
+
+.bg-blue {
+  background-color: #231955;
+}
+
+.btn-blue {
+  background-color: #231955;
+  color: rgba(255, 255, 255, 0.8);
+
+
+}
+
+.btn:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background-color: #1F4690;
+
+}
+
+.text-blue {
+  color: #231955
+}
