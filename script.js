@@ -3,7 +3,8 @@
 // constantes para obtener elementos del DOM 
 const resultado = document.getElementById("resultado");
 const resultadoCiudad = document.getElementById("resultadoCiudad")
-const selectCiudad = document.getElementById("ciudad");
+const form = document.querySelector("form");
+const input = document.getElementById("input_ciudad");
 const botonCiudad = document.getElementById("botonCiudad");
 const resultadoCiudadClima = document.getElementById("resultadoCiudadClima")
 const mapaAurora = document.getElementById("mapaAurora");
@@ -12,8 +13,8 @@ const mapaAurora = document.getElementById("mapaAurora");
 // variables
 let valorCiudad;
 let data;
-let lat;
-let long;
+let latitud;
+let longitud;
 let locaciones
 
 // variables de open weather map // 
@@ -22,59 +23,137 @@ const unidad_temperatura = "metric";
 
 // inicio de funcionalidad 
 
-// evento change para el input de la Ciudad. Se guarda el valor en variable valorCiudad. 
-
-// función con expresión regular para determinar que un campo está vacío. 
-function isBlank(str) {
+// función con expresión regular para determinar que un campo está vacío. - ver si la usamos
+/* function isBlank(str) {
   return (!str || /^\s*$/.test(str));
-}
-
-// función para asignar valores importantes a partir de la ciudad elegida
-// 29/10 - sólo hay dos ciudades 
-//03/10 - esto no será necesario se agregan las opciones de forma programatica
-
-/* function asignoValoresLatylong() {
-  console.log(valorCiudad)
-  switch (valorCiudad) {
-    case "1":
-      nombreCiudad = "Fairbanks - Alaska"
-      lat = "64.8378";
-      long = "-147.716";
-      break;
-    case "2":
-      nombreCiudad = "Whitehorse - Canadá"
-      lat = "60.7212";
-      long = "-114.42";
-      break;
-    default:
-      lat = null
-      long = null
-      break;
-  }
 } */
 
+// función validar Ciudad que no esté vacía y que no sea número
 
-// Acá es donde mostramos resultados.
-function muestroResultados() {
-  const { lat, long, description: nombreCiudad, id } = locaciones.find(locacion => locacion.id === valorCiudad)
+function validarCiudad() {
 
-  // limpiar DIV. 
-  resultado.innerHTML = ""
+  if (input.value !== "" && isNaN(input.value)) {
+    valorCiudad = input.value;
+    form.reset();
+  
+    console.log(valorCiudad);
 
-  // muestra temporariamente esto. 
-  resultado.innerHTML = `
-<p> RESULTADOS LOCAL: La ciudad se llama: ${nombreCiudad}, su value es ${id}. Su latitud es ${lat} y su longitud es ${long}  </p>
-`
-  // llamado a tres funciones que contienen la info: 
-  recuperoDatosCiudad(lat, long) // le pega a la API AURORAS
-  recuperoDatosClima(lat, long) // le pega a la API CLIMA 
-  /* muestroDatosCiudad() */ // muestra datos de la API AURORA
-  muestraMapaAurora() // muestra imagenes que se cargan del services.swpc.noaa.gov
+}
+}
+
+// escucho evento click
+
+botonCiudad.addEventListener("click", (e) => {
+
+  e.preventDefault()
+
+  validarCiudad()
+  llamadaClima(valorCiudad)
+ 
+ })
+
+// llamada api clima 
+
+function llamadaClima(valorCiudad) {
+
+  fetch(
+    `https://api.openweathermap.org/data/2.5/weather?q=${valorCiudad}&appid=${api_key}&units=${unidad_temperatura}`
+  )
+    .then((resp) => {
+
+      if (!resp.ok) throw Error(resp.status) 
+        
+      return resp 
+    })
+
+    .then(res => res.json())
+  
+    .then((json) => {
+      recuperoDatosClima(json);
+          
+    })
+    // se agarra el error en la solicitud por si algo sale mal.
+    .catch(err => console.log('Solicitud fallida', err)); // Capturar errores
+   }
+
+
+// recupero datos del clima - faltan usar - por ahora solo lat y long 
+
+function recuperoDatosClima(data) {
+  const {
+    name,
+    main: { temp, feels_like, temp_min, temp_max, humidity, pressure },
+    wind: { deg, speed },
+    weather: [array],
+    coord: { lon, lat },
+  } = data;
+
+// chequea info de lat y lon. Es vital para que todo funcione
+console.log (data.coord.lon)
+console.log (data.coord.lat)
+
+  
+// utilizo la lat y long para el resto de las solicitudes. 
+  
+// llama a función para mostrar clima pasa data como parámetro
+muestroDatosClima(data)
+  
+  // llama a la api aurora para obtener kp con parámetros de long y lat de api clima 
+llamadaKp(data.coord.lat, data.coord.lon)
+  
+  // llama a datos de services spacial weather se le pasa lat y long 
+probabilidadAuroras(data.coord.lat, data.coord.lon)
 
 }
 
-// función para el fetch de AURORAS, vamos a extraer los datos de OVATION Aurora Model del NOAA
-function recuperoDatosCiudad(lat, long) {
+// llama a api auroras live 
+function llamadaKp(lat, long) {
+
+  fetch(
+    `https://api.auroras.live/v1/?type=all&lat=${lat}&long=${long}&forecast=false&threeday=false`
+  )
+    .then((resp) => {
+      
+      // desarrollar manejo de errores. sobre todo 404. 
+      if (!resp.ok) throw Error(resp.status)
+      return resp 
+    })
+
+    .then(res => res.json())
+  
+    .then((json) => {
+      muestroDatosKp(json);
+          
+    })
+    // se agarra el error en la solicitud por si algo sale mal.
+    .catch(err => console.log('Solicitud fallida', err)); // Capturar errores
+   }
+
+
+// muestra clima. 
+
+  function muestroDatosClima(data) {
+
+      resultadoCiudadClima.innerHTML = `
+        <p>
+        RESULTADO FETCH CLIMA:  clima de la Ciudad de ${data.name} su temperatura es de ${data.main.temp}  su longitud es ${data.coord.lon}  y su latitud es ${data.coord.lat} 
+      </p>`
+    
+    
+    }
+
+// muestra KP 
+
+    function muestroDatosKp(json) {
+
+      console.log(json)
+      
+    }
+
+
+
+// función para el fetch de AURORAS
+function probabilidadAuroras(lat, long) {
 
   fetch(`https://services.swpc.noaa.gov/json/ovation_aurora_latest.json`, {
   })
@@ -82,41 +161,23 @@ function recuperoDatosCiudad(lat, long) {
     // Exito
     .then(res => res.json())  // convertir a json
     .then((json) => {
-
+        console.log(json)
       const coordenadas = json.coordinates
 
       const auroras = coordenadas.flatMap(coordenada => parseInt((coordenada[2])))
 
+
       const maxLocation = coordenadas.filter(coordenada => coordenada[2] === 42)
       console.log(maxLocation)
-      const locationData = coordenadas.filter(coordenada => coordenada[0] === parseInt(long) + 180 && coordenada[1] === parseInt(lat)) //se adicionan 180 para que coinicidan las metricas del servicio meteoroligico espacioal con las metricas de auroras.live 
+      const locationData = coordenadas.filter(coordenada => coordenada[0] === parseInt(long) + 180 && coordenada[1] === parseInt(lat))
 
       muestroDatosCiudad(locationData?.length ? locationData[0][2] : null)
-    })
-    .catch(err => console.log('Solicitud fallida', err)); // Capturar errores
-}
 
-// función para el fetch de CLIMA 
-
-function recuperoDatosClima(lat, long) {
-
-  fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${long}&appid=${api_key}&units=${unidad_temperatura}`
-    , {
-    })
-
-    // Exito
-    .then(res => res.json())  // convertir a json
-    .then((json) => {
-
-      muestroDatosClima(json);
 
     })
     .catch(err => console.log('Solicitud fallida', err)); // Capturar errores
 
-
 }
-
-// función para mostrar los datos del resultado del fetch AURORAS. Se hace un barra de gradientes que luego se podrá a animar segun las resultados para darle dinamismo... la info de probabilidad se saca de la web del NOAA... Atención hay que chequear si realmente el avotion es la probabilidad
 
 function muestroDatosCiudad(probabilidad) {
   console.log("probabilidad es igual a " + probabilidad)
@@ -145,110 +206,3 @@ function muestroDatosCiudad(probabilidad) {
   resultadoCiudad.appendChild(div)
 
 }
-
-// función para mostrar los datos del resultado del fetch CLIMA, no se toca esta función
-
-function muestroDatosClima(data) {
-
-  const {
-    name,
-    main: { temp, feels_like, temp_min, temp_max, humidity, pressure },
-    wind: { deg, speed },
-    weather: [array],
-    coord: { lon, lat },
-  } = data;
-
-  resultadoCiudadClima.innerHTML = `
-    <p>
-    RESULTADO FETCH CLIMA:  clima de la Ciudad de ${data.name} su temperatura es de ${data.main.temp}  su longitud es ${data.coord.lon} y su latitud es ${data.coord.lat}
-  </p>`
-
-}
-
-// función para mostrar probabilidad de auroras en hemisferio norte y hermisferio sur. Fuente: services.swpc.noaa.gov - Modelo Ovation Aurora Model - Esto es fijo sin importar las latitudes que se ingresen. Aún por averiguar cada cuanto el servicio refresca la imagen creo que cada una hora. 
-
-function muestraMapaAurora() {
-
-  mapaAurora.innerHTML = ` 
-    <div>
-  <div class="row">
-  <div class="fs-6 fw-bold">Estos mapas muestran la posición estimada del óvalo del Aurora Model. Son imágenes procesadas por un software del Space Weather Prediction Center, se actualizan cada xx completar.</div>
-    <div class="col-lg-6">
-      <img
-        src="https://services.swpc.noaa.gov/images/aurora-forecast-southern-hemisphere.jpg"
-        alt=" Auroras hemisferio sur  "
-        class="w-100  mb-2 mb-md-4 shadow-1-strong rounded"
-      />
-    </div>
-    <div class="col-lg-6">
-      <img
-        src="https://services.swpc.noaa.gov/images/aurora-forecast-northern-hemisphere.jpg"
-        alt="auroras hemisferio norte"
-        class="w-100 shadow-1-strong rounded"
-      />
-    </div>
-  </div>
-</div>
-    `
-}
-
-// Reemplazo el innerHTML con las dos ciudades iniciales para añadir opciones de forma programática (las 16 ubicaciones de la API Aurolas Live)
-
-function traerLocaciones() {
-  fetch("https://api.auroras.live/v1/?type=locations").then(response => response.json()).then(data => {
-    const dataArray = Object.keys(data).map(key => data[key])
-    locaciones = dataArray;
-    renderizarLocaciones(dataArray)
-    addEventListeners()
-  }).catch(error => console.log(error))
-}
-
-function renderizarLocaciones(locaciones) {
-  selectCiudad.innerHTML = '<option value="">Seleccione una ubicación</option>';
-
-  for (const locacion of locaciones) {
-
-    if (locacion === "message") {
-      continue;
-    }
-
-    const elementoHTML = obtenerPlantillaHTMLLocaciones(locacion);
-    selectCiudad.innerHTML += elementoHTML;
-  }
-}
-
-function obtenerPlantillaHTMLLocaciones(locacion) {
-  return `<option value="${locacion.id}">${locacion.description}</option>`
-}
-
-// I write it at the end because I am working with global variables, I need the info previously loaded... mica
-function addEventListeners() {
-
-  selectCiudad.addEventListener('change', function handleChange(event) {
-    console.log(event.target.value);
-    valorCiudad = event.target.value
-  });
-
-// escucha el boton - chequea el value que no este vacío. 
-
-  botonCiudad.addEventListener("click", (e) => {
-    console.log("entre al click de una")
-    e.preventDefault()
-    console.log()
-    // chequeo que variable / si está true llamo a funciones
-    if (!isBlank(valorCiudad)) {
-      console.log(`y mi valor es ${valorCiudad} `)
-      /* asignoValoresLatylong(); */ // funcion que asigna lat y long
-      muestroResultados()
-      // si es false, es porque no se seleccionó ciudad. 
-    } else {
-      resultadoCiudad.innerHTML = "";
-      mapaAurora.innerHTML = "";
-      resultadoCiudadClima.innerHTML = "";
-      resultado.innerHTML = `
-        <p class="alert alert-danger" role="alert">Por favor seleccione una Ciudad</p>`
-    }
-  })
-}
-
-traerLocaciones()
