@@ -1,5 +1,4 @@
 // variables que se van a usar 
-
 // constantes para obtener elementos del DOM 
 const resultado = document.getElementById("resultado");
 const resultadoCiudad = document.getElementById("resultadoCiudad")
@@ -35,10 +34,10 @@ function validarCiudad() {
   if (input.value !== "" && isNaN(input.value)) {
     valorCiudad = input.value;
     form.reset();
-  
+
     console.log(valorCiudad);
 
-}
+  }
 }
 
 // escucho evento click
@@ -49,8 +48,8 @@ botonCiudad.addEventListener("click", (e) => {
 
   validarCiudad()
   llamadaClima(valorCiudad)
- 
- })
+
+})
 
 // llamada api clima 
 
@@ -61,20 +60,21 @@ function llamadaClima(valorCiudad) {
   )
     .then((resp) => {
 
-      if (!resp.ok) throw Error(resp.status) 
-        
-      return resp 
+      if (!resp.ok) throw Error(resp.status)
+
+      return resp
     })
 
     .then(res => res.json())
-  
+
     .then((json) => {
       recuperoDatosClima(json);
-          
+      console.log(json)
+
     })
     // se agarra el error en la solicitud por si algo sale mal.
     .catch(err => console.log('Solicitud fallida', err)); // Capturar errores
-   }
+}
 
 
 // recupero datos del clima - faltan usar - por ahora solo lat y long 
@@ -82,27 +82,39 @@ function llamadaClima(valorCiudad) {
 function recuperoDatosClima(data) {
   const {
     name,
+    dt,
+    timezone,
     main: { temp, feels_like, temp_min, temp_max, humidity, pressure },
     wind: { deg, speed },
     weather: [array],
     coord: { lon, lat },
   } = data;
 
-// chequea info de lat y lon. Es vital para que todo funcione
-console.log (data.coord.lon)
-console.log (data.coord.lat)
+  // chequea info de lat y lon. Es vital para que todo funcione
+  console.log(data.coord.lon)
+  console.log(data.coord.lat)
+  console.log(data.dt)
+  console.log(data.timezone)
+  console.log(new Date(data.dt * 1000 + (data.timezone * 1000)))
+  console.log(new Date(data.dt * 1000 - (data.timezone * 1000)));
+  const hoy = new Date()
+  hora = moment(data.dt).utcOffset(data.timezone).format('YYYY-MM-DD HH:mm')
+  console.log(hoy)
+  console.log(hora)
 
-  
-// utilizo la lat y long para el resto de las solicitudes. 
-  
-// llama a función para mostrar clima pasa data como parámetro
-muestroDatosClima(data)
-  
+
+  // utilizo la lat y long para el resto de las solicitudes. 
+
+
+
   // llama a la api aurora para obtener kp con parámetros de long y lat de api clima 
-llamadaKp(data.coord.lat, data.coord.lon)
-  
+  llamadaKp(data.coord.lat, data.coord.lon)
+
   // llama a datos de services spacial weather se le pasa lat y long 
-probabilidadAuroras(data.coord.lat, data.coord.lon)
+  probabilidadAuroras(data.coord.lat, data.coord.lon)
+
+  // llama a función para mostrar clima pasa data como parámetro
+  muestroDatosClima(data)
 
 }
 
@@ -113,42 +125,52 @@ function llamadaKp(lat, long) {
     `https://api.auroras.live/v1/?type=all&lat=${lat}&long=${long}&forecast=false&threeday=false`
   )
     .then((resp) => {
-      
+
       // desarrollar manejo de errores. sobre todo 404. 
       if (!resp.ok) throw Error(resp.status)
-      return resp 
+      return resp
     })
 
     .then(res => res.json())
-  
+
     .then((json) => {
       muestroDatosKp(json);
-          
+
     })
     // se agarra el error en la solicitud por si algo sale mal.
     .catch(err => console.log('Solicitud fallida', err)); // Capturar errores
-   }
+}
+
+
+// muestra KP 
+
+function muestroDatosKp(json) {
+
+  console.log(json)
+  console.log(json.ace.kp)
+  console.log(json.date)
+
+  grafico(json.ace.kp, "canvas", 9);
+  grafico(json.ace.kp1hour, "canvas2", 9);
+  //grafico(json.ace.kp4hour, "canvas3", 9)
+
+
+}
 
 
 // muestra clima. 
 
-  function muestroDatosClima(data) {
+function muestroDatosClima(data) {
 
-      resultadoCiudadClima.innerHTML = `
+  console.log(new Date(data.dt * 1000 - (data.timezone * 1000))); // minus 
+
+  resultadoCiudadClima.innerHTML = `
         <p>
-        RESULTADO FETCH CLIMA:  clima de la Ciudad de ${data.name} su temperatura es de ${data.main.temp}  su longitud es ${data.coord.lon}  y su latitud es ${data.coord.lat} 
+        RESULTADO FETCH CLIMA:  clima de la Ciudad de ${data.name} su temperatura es de ${data.main.temp}  su longitud es ${data.coord.lon}  y su latitud es ${data.coord.lat} horario: 
       </p>`
-    
-    
-    }
 
-// muestra KP 
 
-    function muestroDatosKp(json) {
-
-      console.log(json)
-      
-    }
+}
 
 
 
@@ -161,10 +183,13 @@ function probabilidadAuroras(lat, long) {
     // Exito
     .then(res => res.json())  // convertir a json
     .then((json) => {
-        console.log(json)
+      console.log(json)
       const coordenadas = json.coordinates
+      console.log(coordenadas)
 
       const auroras = coordenadas.flatMap(coordenada => parseInt((coordenada[2])))
+      console.log(auroras)
+
 
 
       const maxLocation = coordenadas.filter(coordenada => coordenada[2] === 42)
@@ -181,6 +206,9 @@ function probabilidadAuroras(lat, long) {
 
 function muestroDatosCiudad(probabilidad) {
   console.log("probabilidad es igual a " + probabilidad)
+
+  grafico(probabilidad, "canvas4", 100)
+
 
   let color = ""
 
@@ -206,3 +234,5 @@ function muestroDatosCiudad(probabilidad) {
   resultadoCiudad.appendChild(div)
 
 }
+
+

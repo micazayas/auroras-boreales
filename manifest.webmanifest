@@ -1,0 +1,32 @@
+{
+    "theme_color": "#4d1e6a",
+    "background_color": "#7805cd",
+    "display": "standalone",
+    "scope": "/",
+    "start_url": "/index.html",
+    "name": "AppAuroraBoreal",
+    "short_name": "AuroraBoreal",
+    "description": "App para chequear el avistaje de Auroras Boreales",
+    "icons": [
+        {
+            "src": "/assets/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/assets/icon-256x256.png",
+            "sizes": "256x256",
+            "type": "image/png"
+        },
+        {
+            "src": "/assets/icon-384x384.png",
+            "sizes": "384x384",
+            "type": "image/png"
+        },
+        {
+            "src": "/assets/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
